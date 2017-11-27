@@ -252,7 +252,8 @@ public class QueryTranslatorImpl implements FilterTranslator {
 				LOG.debugf( "SQL: %s", sql );
 			}
 			gen.getParseErrorHandler().throwQueryException();
-			collectedParameterSpecifications = gen.getCollectedParameters();
+			collectedParameterSpecifications = getWalker().getTemporalParameters();
+			collectedParameterSpecifications.addAll(gen.getCollectedParameters());
 		}
 	}
 

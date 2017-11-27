@@ -1115,5 +1115,16 @@ public class HqlParserTest {
 		return ast;
 	}
 
-
+	@Test
+	public void temporalQueryTest() throws Exception {
+		String testCase = "FROM PolicyStt for system_time as of '2017-10-0611:17:31.226' where id BETWEEN '21212' AND '22323' group by id, id2";
+		HqlParser hqlParser = HqlParser.getInstance(testCase);
+		hqlParser.setFilter(false);
+		hqlParser.statement();
+		final AST ast = hqlParser.getAST();
+		System.out.println( "AST  :  " + ast.toStringTree() + "" );
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		hqlParser.showAst( ast, new PrintStream( baos ) );
+		System.out.println( baos.toString() );
+	}
 }
