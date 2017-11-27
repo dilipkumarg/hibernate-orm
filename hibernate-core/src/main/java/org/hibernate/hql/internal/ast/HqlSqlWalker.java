@@ -130,6 +130,7 @@ public class HqlSqlWalker extends HqlSqlBaseWalker implements ErrorReporter, Par
 	private int parameterCount;
 	private Map namedParameters = new HashMap();
 	private ArrayList<ParameterSpecification> parameters = new ArrayList<ParameterSpecification>();
+	private ArrayList<ParameterSpecification> temporalParameters = new ArrayList<ParameterSpecification>();
 	private int numberOfParametersInSetClause;
 	private int positionalParameterCount;
 
@@ -286,6 +287,10 @@ public class HqlSqlWalker extends HqlSqlBaseWalker implements ErrorReporter, Par
 		return aliasGenerator;
 	}
 
+	public ArrayList<ParameterSpecification> getTemporalParameters() {
+		return temporalParameters;
+	}
+
 	public FromClause getCurrentFromClause() {
 		return currentFromClause;
 	}
@@ -320,15 +325,15 @@ public class HqlSqlWalker extends HqlSqlBaseWalker implements ErrorReporter, Par
 	}
 
 	@Override
-	protected AST createFromElement(String path, AST alias, AST propertyFetch) throws SemanticException {
-		FromElement fromElement = currentFromClause.addFromElement( path, alias );
+	protected AST createFromElement(String path, String periodClause, String secondPeriodClause, AST alias, AST	propertyFetch) throws SemanticException {
+		FromElement fromElement = currentFromClause.addFromElement( path, periodClause,secondPeriodClause,alias );
 		fromElement.setAllPropertyFetch( propertyFetch != null );
 		return fromElement;
 	}
 
 	@Override
-	protected AST createFromFilterElement(AST filterEntity, AST alias) throws SemanticException {
-		FromElement fromElement = currentFromClause.addFromElement( filterEntity.getText(), alias );
+	protected AST createFromFilterElement(AST filterEntity, String periodClause, String secondPeriodClause, AST alias) throws SemanticException {
+		FromElement fromElement = currentFromClause.addFromElement( filterEntity.getText(), periodClause, secondPeriodClause,alias );
 		FromClause fromClause = fromElement.getFromClause();
 		QueryableCollection persister = sessionFactoryHelper.getCollectionPersister( collectionFilterRole );
 		// Get the names of the columns used to link between the collection
@@ -1102,6 +1107,27 @@ public class HqlSqlWalker extends HqlSqlBaseWalker implements ErrorReporter, Par
 		parameters.add( paramSpec );
 		return parameter;
 	}
+
+	@Override
+	protected AST generateTemporalNamedParameter(AST delimiterNode, AST nameNode) throws SemanticException {
+		String name = nameNode.getText();
+		trackNamedParameterPositions( name );
+
+		// create the node initially with the param name so that it shows
+		// appropriately in the "original text" attribute
+		ParameterNode parameter = (ParameterNode) astFactory.create( NAMED_PARAM, name );
+		parameter.setText( "?" );
+
+		NamedParameterSpecification paramSpec = new NamedParameterSpecification(
+				delimiterNode.getLine(),
+				delimiterNode.getColumn(),
+				name
+		);
+		parameter.setHqlParameterSpecification( paramSpec );
+		temporalParameters.add( paramSpec );
+		return parameter;
+	}
+
 
 	@Override
 	protected AST generateNamedParameter(AST delimiterNode, AST nameNode) throws SemanticException {

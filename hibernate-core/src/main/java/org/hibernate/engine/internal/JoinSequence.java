@@ -47,6 +47,7 @@ public class JoinSequence {
 	private Selector selector;
 	private JoinSequence next;
 	private boolean isFromPart;
+	private String periodClause;
 
 	/**
 	 * Constructs a JoinSequence
@@ -197,7 +198,12 @@ public class JoinSequence {
 		Join first;
 		Joinable last;
 		if ( rootJoinable != null ) {
-			joinFragment.addCrossJoin( rootJoinable.getTableName(), rootAlias );
+			if(periodClause != null) {
+				joinFragment.addCrossJoin(rootJoinable.getTableName(), periodClause, rootAlias);
+			}
+			else {
+				joinFragment.addCrossJoin(rootJoinable.getTableName(), rootAlias);
+			}
 			final String filterCondition = rootJoinable.filterFragment( rootAlias, enabledFilters, treatAsDeclarations );
 			// JoinProcessor needs to know if the where clause fragment came from a dynamic filter or not so it
 			// can put the where clause fragment in the right place in the SQL AST.   'hasFilterCondition' keeps track
@@ -499,6 +505,13 @@ public class JoinSequence {
 	public JoinSequence setRoot(Joinable joinable, String alias) {
 		this.rootAlias = alias;
 		this.rootJoinable = joinable;
+		return this;
+	}
+
+	public JoinSequence setRoot(Joinable joinable, String alias, String periodClause) {
+		this.rootAlias = alias;
+		this.rootJoinable = joinable;
+		this.periodClause = periodClause;
 		return this;
 	}
 

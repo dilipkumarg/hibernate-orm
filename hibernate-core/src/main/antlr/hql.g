@@ -137,6 +137,12 @@ tokens
 	NUM_BIG_INTEGER;
 	NUM_BIG_DECIMAL;
 	JAVA_CONSTANT;
+
+	// -- DB2 Temporal Tokens --
+	BUSINESS_TIME="business_time";
+	FOR="for";
+	TO="to";
+	SYSTEM_TIME="system_time";
 }
 
 {
@@ -340,7 +346,7 @@ selectFrom!
 			else
 				throw new SemanticException("FROM expected (non-filter queries must contain a FROM clause)");
 		}
-			
+
 		// Create an artificial token so the 'FROM' can be placed
 		// before the SELECT in the tree to make tree processing
 		// simpler.
@@ -380,7 +386,7 @@ fromClause
 //##     ( ( 'left'|'right' 'outer'? ) | 'full' | 'inner' )? JOIN FETCH?;
 
 fromJoin
-	: ( ( ( LEFT | RIGHT ) (OUTER)? ) | FULL | INNER )? JOIN^ (FETCH)? 
+	: ( ( ( LEFT | RIGHT ) (OUTER)? ) | FULL | INNER )? JOIN^ (FETCH)?
 	        joinPath (asAlias)? (propertyFetch)? (withClause)?
 	;
 
@@ -417,10 +423,10 @@ fromRange
 	| inCollectionDeclaration
 	| inCollectionElementsDeclaration
 	;
-	
+
 fromClassOrOuterQueryPath!
-	: c:path { weakKeywords(); } (a:asAlias)? (p:propertyFetch)? {
-		#fromClassOrOuterQueryPath = #([RANGE, "RANGE"], #c, #a, #p);
+	: c:path { weakKeywords(); } (t:periodClause)? (t2:periodClause)? (a:asAlias)? (p:propertyFetch)? {
+		#fromClassOrOuterQueryPath = #([RANGE, "RANGE"], #c, #t, #t2, #a, #p);
 	}
 	;
 
@@ -450,7 +456,7 @@ asAlias
 alias
 	: a:identifier { #a.setType(ALIAS); }
     ;
-    
+
 propertyFetch
 	: FETCH ALL! PROPERTIES!
 	;
@@ -518,7 +524,7 @@ whereClause
 selectedPropertiesList
 	: aliasedExpression ( COMMA! aliasedExpression )*
 	;
-	
+
 aliasedExpression
 	: expression ( AS^ identifier )?
 	;
@@ -549,6 +555,42 @@ aliasedExpression
 
 logicalExpression
 	: expression
+	;
+
+//## periodClause:
+//##     FOR ( BUSINESS_TIME | SYSTEM_TIME ) temporalExpression;
+
+periodClause
+	: FOR^ temporalExpression
+	;
+
+temporalExpression
+	: (BUSINESS_TIME^  temporalFilterExpression)
+	| (SYSTEM_TIME^ temporalFilterExpression)
+	;
+
+temporalFilterExpression
+    : AS^ temporalAsOfExpression
+    | FROM^ temporalFromExpression
+    | BETWEEN^ temporalBetweenExpression
+    ;
+
+temporalAsOfExpression
+	: OF! (valueExpr)
+	;
+
+temporalFromExpression
+	:(valueExpr) TO! (valueExpr)
+	;
+
+//can "betweenList" be used instead?
+temporalBetweenExpression
+	: (valueExpr) AND! (valueExpr)
+	;
+
+valueExpr
+	:constant
+	| parameter
 	;
 
 // Main expression rule
@@ -644,10 +686,10 @@ memberOfPath
 
 //level 4 - string concatenation
 concatenation
-	: additiveExpression 
-	( c:CONCAT^ { #c.setType(EXPR_LIST); #c.setText("concatList"); } 
+	: additiveExpression
+	( c:CONCAT^ { #c.setType(EXPR_LIST); #c.setText("concatList"); }
 	  additiveExpression
-	  ( CONCAT! additiveExpression )* 
+	  ( CONCAT! additiveExpression )*
 	  { #concatenation = #([METHOD_CALL, "||"], #([IDENT, "concat"]), #c ); } )?
 	;
 
@@ -660,7 +702,7 @@ additiveExpression
 multiplyExpression
 	: unaryExpression ( ( STAR^ | DIV^ | MOD^ ) unaryExpression )*
 	;
-	
+
 // level 1 - unary minus, unary plus, not
 unaryExpression
 	: MINUS^ {#MINUS.setType(UNARY_MINUS);} unaryExpression
@@ -697,9 +739,9 @@ searchedCaseStatement
 searchedCaseWhenClause
 	: (WHEN^ logicalExpression THEN! unaryExpression)
 	;
-	
+
 quantifiedExpression
-	: ( SOME^ | EXISTS^ | ALL^ | ANY^ ) 
+	: ( SOME^ | EXISTS^ | ALL^ | ANY^ )
 	( identifier | collectionExpr | (OPEN! ( subQuery ) CLOSE!) )
 	;
 
@@ -830,7 +872,7 @@ aggregate
 collectionExpr
 	: (ELEMENTS^ | INDICES^) OPEN! path CLOSE!
 	;
-                                           
+
 // NOTE: compoundExpr can be a 'path' where the last token in the path is '.elements' or '.indicies'
 compoundExpr
 	: collectionExpr
@@ -851,8 +893,8 @@ exprList
 }
 	: (t:TRAILING {#trimSpec = #t;} | l:LEADING {#trimSpec = #l;} | b:BOTH {#trimSpec = #b;})?
 	  		{ if(#trimSpec != null) #trimSpec.setType(IDENT); }
-	  ( 
-	  		expression ( (COMMA! expression)+ | FROM { #FROM.setType(IDENT); } expression | AS! identifier )? 
+	  (
+	  		expression ( (COMMA! expression)+ | FROM { #FROM.setType(IDENT); } expression | AS! identifier )?
 	  		| FROM { #FROM.setType(IDENT); } expression
 	  )?
 			{ #exprList = #([EXPR_LIST,"exprList"], #exprList); }

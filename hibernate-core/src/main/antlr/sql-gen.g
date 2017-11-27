@@ -53,7 +53,7 @@ options {
 	}
 
 	protected void out(AST n) {
-		out(n.getText());
+		out(" "+n.getText()+" ");
 	}
 
 	protected void separator(AST n, String sep) {

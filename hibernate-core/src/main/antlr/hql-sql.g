@@ -53,7 +53,7 @@ tokens
 	NAMED_PARAM;    // A named parameter (:foo).
 	BOGUS;          // Used for error state detection, etc.
 	RESULT_VARIABLE_REF;   // An IDENT that refers to result variable
-	                       // (i.e, an alias for a select expression) 
+	                       // (i.e, an alias for a select expression)
 }
 
 // -- Declarations --
@@ -179,13 +179,14 @@ tokens
 	/** Sets the current 'FROM' context. **/
 	protected void pushFromClause(AST fromClause,AST inputFromNode) {}
 
-	protected AST createFromElement(String path,AST alias,AST propertyFetch) throws SemanticException {
+	protected AST createFromElement(String path, String periodClause, String secondPeriodClause, AST alias,AST
+	propertyFetch) throws SemanticException {
 		return null;
 	}
 
 	protected void createFromJoinElement(AST path,AST alias,int joinType,AST fetch,AST propertyFetch,AST with) throws SemanticException {}
 
-	protected AST createFromFilterElement(AST filterEntity,AST alias) throws SemanticException	{
+	protected AST createFromFilterElement(AST filterEntity, String periodClause, String secondPeriodClause,AST alias)throws SemanticException{
 		return null;
 	}
 
@@ -224,6 +225,10 @@ tokens
 	protected AST generateNamedParameter(AST delimiterNode, AST nameNode) throws SemanticException {
 		return #( [NAMED_PARAM, nameNode.getText()] );
 	}
+
+	protected AST generateTemporalNamedParameter(AST delimiterNode, AST nameNode) throws SemanticException {
+    		return #( [NAMED_PARAM, nameNode.getText()] );
+    }
 
 	protected AST generatePositionalParameter(AST inputNode) throws SemanticException {
 		return #( [PARAM, "?"] );
@@ -477,17 +482,21 @@ fromElementList {
 
 fromElement! {
 	String p = null;
+	String t = null;
+	String t2 = null;
+	String t3 = null;
+   	String t4 = null;
 	}
 	// A simple class name, alias element.
-	: #(RANGE p=path (a:ALIAS)? (pf:FETCH)? ) {
-		#fromElement = createFromElement(p,a, pf);
+	: #(RANGE p=path (t=periodClause)? (t2=periodClause)? (a:ALIAS)? (pf:FETCH)? ) {
+		#fromElement = createFromElement(p, t, t2, a, pf);
 	}
 	| je:joinElement {
 		#fromElement = #je;
 	}
 	// A from element created due to filter compilation
-	| fe:FILTER_ENTITY a3:ALIAS {
-		#fromElement = createFromFilterElement(fe,a3);
+	| fe:FILTER_ENTITY (t3=periodClause)? (t4=periodClause)? a3:ALIAS {
+		#fromElement = createFromFilterElement(fe, t3, t4, a3);
 	}
 	;
 
@@ -558,6 +567,51 @@ withClause
 	}
 	;
 
+
+periodClause returns [String p] {
+        p = "";
+        String t = "";
+        StringBuilder buf = new StringBuilder();
+    }
+    : #(FOR { buf.append(" for ");} t=temporalExpr { buf.append(t); p=buf.toString(); })
+    ;
+
+temporalExpr returns [String t] {
+    t= "";
+    String f = "";
+    StringBuilder buf = new StringBuilder();
+    }
+    : #(SYSTEM_TIME {buf.append(" system_time ");} f=temporalFilterExpr{buf.append(f);t = buf.toString();})
+    | #(BUSINESS_TIME {buf.append(" business_time ");} f=temporalFilterExpr{buf.append(f);t=buf.toString();})
+    ;
+
+temporalFilterExpr returns [String t]{
+     t= "";
+     String v = "";
+     String v2 = "";
+     StringBuilder buf = new StringBuilder();
+    }:#(AS {buf.append(" as of ");} v=value{buf.append(v);t = buf.toString();})
+    |#(FROM {buf.append(" from ");} v=value{buf.append(v);} {buf.append(" to ");} v2=value{buf.append(v2);t = buf.toString();})
+    |#(BETWEEN {buf.append(" between ");} v=value{buf.append(v);} {buf.append(" and ");} v2=value{buf.append(v2);t=buf.toString();})
+	;
+
+value returns [String v]{
+     v=null;
+     StringBuilder buf = new StringBuilder();
+    }
+    : c:constant{buf.append(c.getText());v=buf.toString();}
+    | p:temporalParameter{buf.append(#p.getText());v=buf.toString();}
+	;
+
+temporalParameter!
+	: #(c:COLON a:identifier) {
+			// Create a NAMED_PARAM node instead of (COLON IDENT).
+			#temporalParameter = generateTemporalNamedParameter( c, a );
+//			#temporalParameter = #([NAMED_PARAM,a.getText()]);
+//			namedParameter(#parameter);
+		}
+    ;
+
 whereClause
 	: #(w:WHERE { handleClauseStart( WHERE ); } b:logicalExpr ) {
 		// Use the *output* AST for the boolean expression!
@@ -610,12 +664,12 @@ exprOrSubquery [ AST predicateNode ]
 	| #(ALL collectionFunctionOrSubselect)
 	| #(SOME collectionFunctionOrSubselect)
 	;
-	
+
 collectionFunctionOrSubselect
 	: collectionFunction
 	| query
 	;
-	
+
 expr [ AST predicateNode ]
 	: ae:addrExpr [ true ] { resolve(#ae, predicateNode); }	// Resolve the top level 'address expression'
 	| #( VECTOR_EXPR (expr [ predicateNode ])* )
@@ -668,12 +722,12 @@ searchedCaseWhenClause [ AST predicateNode ]
 	;
 
 
-//TODO: I don't think we need this anymore .. how is it different to 
+//TODO: I don't think we need this anymore .. how is it different to
 //      maxelements, etc, which are handled by functionCall
 collectionFunction
-	: #(e:ELEMENTS {inFunctionCall=true;} p1:propertyRef { resolve(#p1); } ) 
+	: #(e:ELEMENTS {inFunctionCall=true;} p1:propertyRef { resolve(#p1); } )
 		{ processFunction(#e,inSelect); } {inFunctionCall=false;}
-	| #(i:INDICES {inFunctionCall=true;} p2:propertyRef { resolve(#p2); } ) 
+	| #(i:INDICES {inFunctionCall=true;} p2:propertyRef { resolve(#p2); } )
 		{ processFunction(#i,inSelect); } {inFunctionCall=false;}
 	;
 
@@ -713,7 +767,7 @@ identifier
 
 addrExpr! [ boolean root ]
 	: #(d:DOT lhs:addrExprLhs rhs:propertyName )	{
-		// This gives lookupProperty() a chance to transform the tree 
+		// This gives lookupProperty() a chance to transform the tree
 		// to process collection properties (.elements, etc).
 		#addrExpr = #(#d, #lhs, #rhs);
 		#addrExpr = lookupProperty(#addrExpr,root,false);
