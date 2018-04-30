@@ -574,9 +574,24 @@ periodClause returns [String p] {
         String t = "";
         StringBuilder buf = new StringBuilder();
     }
-    : #(FOR { buf.append(" for ");} t=temporalExpr { buf.append(t); p=buf.toString(); })
+    : #(FOR { buf.append(" for ");} t=temporalClause { buf.append(t); p=buf.toString(); })
     ;
 
+temporalClause returns [String t] {
+t = "";
+String f = "";
+StringBuilder buf = new StringBuilder();
+}
+: #(PORTION {buf.append(" portion of ");} f=businessFilterExpr{buf.append(f); t = buf.toString();})
+| t=temporalExpr
+;
+businessFilterExpr returns [String t] {
+t = "";
+String f = "";
+   StringBuilder buf = new StringBuilder();
+}
+: #(BUSINESS_TIME {buf.append(" business_time ");} f=temporalFilterExpr{buf.append(f);t=buf.toString();})
+;
 temporalExpr returns [String t] {
     t= "";
     String f = "";

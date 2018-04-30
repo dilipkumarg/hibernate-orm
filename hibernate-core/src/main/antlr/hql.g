@@ -140,9 +140,11 @@ tokens
 
 	// -- DB2 Temporal Tokens --
 	BUSINESS_TIME="business_time";
-	FOR="for";
-	TO="to";
 	SYSTEM_TIME="system_time";
+	FOR="for";
+	PORTION="portion";
+    OF="of";
+	TO="to";
 }
 
 {
@@ -295,8 +297,8 @@ deleteStatement
 	;
 
 optionalFromTokenFromClause!
-	: {matchOptionalFrom();} f:path (a:asAlias)? {
-		AST #range = #([RANGE, "RANGE"], #f, #a);
+	: {matchOptionalFrom();} f:path(p:forPortionOfBusinessClause)? (a:asAlias)? {
+		AST #range = #([RANGE, "RANGE"], #f,#p, #a);
 		#optionalFromTokenFromClause = #([FROM, "FROM"], #range);
 	}
 	;
@@ -563,6 +565,24 @@ logicalExpression
 periodClause
 	: FOR^ temporalExpression
 	;
+
+//## forPortionOfBusinessClause:
+//##     FOR PORTION OF BUSINESS_TIME temporalExpression;
+
+forPortionOfBusinessClause
+: FOR^ portionOfPeriodBusinessClause
+;
+
+portionOfPeriodBusinessClause
+: PORTION^ ofBusinessClause
+;
+
+ofBusinessClause
+: OF! businessClause
+;
+businessClause
+: (BUSINESS_TIME^ temporalFilterExpression)
+;
 
 temporalExpression
 	: (BUSINESS_TIME^  temporalFilterExpression)

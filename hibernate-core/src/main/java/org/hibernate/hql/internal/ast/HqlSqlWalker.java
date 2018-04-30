@@ -87,6 +87,7 @@ import org.hibernate.type.CompositeType;
 import org.hibernate.type.DbTimestampType;
 import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
+import  org.hibernate.type.TimestampType;
 import org.hibernate.usertype.UserVersionType;
 
 import antlr.ASTFactory;
@@ -825,8 +826,9 @@ public class HqlSqlWalker extends HqlSqlBaseWalker implements ErrorReporter, Par
 		FromElement fromElement = (FromElement) statement.getFromClause().getFromElements().get( 0 );
 		Queryable persister = fromElement.getQueryable();
 		// Make #@%$^#^&# sure no alias is applied to the table name
+		if (fromElement.getPeriodClause() == null || (fromElement.getPeriodClause() != null && fromElement.getPeriodClause().isEmpty())) {
 		fromElement.setText( persister.getTableName() );
-
+		}
 //		// append any filter fragments; the EMPTY_MAP is used under the assumption that
 //		// currently enabled filters should not affect this process
 //		if ( persister.getDiscriminatorType() != null ) {
@@ -1126,7 +1128,9 @@ public class HqlSqlWalker extends HqlSqlBaseWalker implements ErrorReporter, Par
 				name
 		);
 		parameter.setHqlParameterSpecification( paramSpec );
+		parameter.setExpectedType(TimestampType.INSTANCE);
 		temporalParameters.add( paramSpec );
+		parameters.add(paramSpec);
 		return parameter;
 	}
 
