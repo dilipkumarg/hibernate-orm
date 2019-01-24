@@ -42,7 +42,8 @@ public class BasicExecutor implements StatementExecutor {
 			gen.statement( walker.getAST() );
 			sql = gen.getSQL();
 			gen.getParseErrorHandler().throwQueryException();
-			parameterSpecifications = gen.getCollectedParameters();
+			parameterSpecifications = walker.getTemporalParameters();
+			parameterSpecifications.addAll(gen.getCollectedParameters());
 		}
 		catch ( RecognitionException e ) {
 			throw QuerySyntaxException.convert( e );

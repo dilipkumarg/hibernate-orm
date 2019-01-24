@@ -71,11 +71,14 @@ public class FromClause extends HqlSqlWalkerNode implements HqlSqlTokenTypes, Di
 	 *
 	 * @return FromElement - The new FROM element.
 	 */
-	public FromElement addFromElement(String path, AST alias) throws SemanticException {
+	public FromElement addFromElement(String path, String periodClause, String secondPeriodClause, AST alias) throws SemanticException {
 		// The path may be a reference to an alias defined in the parent query.
 		String classAlias = ( alias == null ) ? null : alias.getText();
 		checkForDuplicateClassAlias( classAlias );
-		FromElementFactory factory = new FromElementFactory( this, null, path, classAlias, null, false );
+		if(secondPeriodClause != null){
+			periodClause = periodClause.concat(" " + secondPeriodClause);
+		}
+		FromElementFactory factory = new FromElementFactory( this, null, path, classAlias, null,periodClause, false );
 		return factory.addFromElement();
 	}
 

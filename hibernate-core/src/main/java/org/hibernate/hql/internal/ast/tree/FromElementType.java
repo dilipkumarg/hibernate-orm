@@ -9,6 +9,7 @@ package org.hibernate.hql.internal.ast.tree;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.hibernate.MappingException;
@@ -60,6 +61,20 @@ class FromElementType {
 		this.entityType = entityType;
 		if ( persister != null ) {
 			fromElement.setText( ( (Queryable) persister ).getTableName() + " " + getTableAlias() );
+		}
+	}
+
+	public FromElementType(FromElement fromElement, EntityPersister persister, EntityType entityType, String
+			periodClause) {
+		this.fromElement = fromElement;
+		this.persister = persister;
+		this.entityType = entityType;
+		if (persister != null) {
+			String fromElementText = ( (Queryable) persister ).getTableName();
+			if(periodClause != null) {
+				fromElementText = fromElement + " " + periodClause;
+			}
+			fromElement.setText(fromElementText+" " + getTableAlias());
 		}
 	}
 
@@ -319,7 +334,7 @@ class FromElementType {
 			Joinable joinable = (Joinable) persister;
 			final JoinSequence joinSequence = fromElement.getSessionFactoryHelper().createJoinSequence().setRoot(
 					joinable,
-					getTableAlias()
+					getTableAlias(), fromElement.getPeriodClause()
 			);
 			joinSequence.applyTreatAsDeclarations( treatAsDeclarations );
 			return joinSequence;
