@@ -98,6 +98,15 @@ public class QueryJoinFragment extends JoinFragment {
 	}
 
 
+	public void addCrossJoin(String tableName, String periodClause, String alias) {
+		afterFrom.append(", ")
+				.append(tableName)
+				.append(" ")
+				.append(periodClause)
+				.append(" ")
+				.append(alias);
+	}
+
 	public void addCrossJoin(String tableName, String alias) {
 		afterFrom.append( ", " )
 				.append( tableName )

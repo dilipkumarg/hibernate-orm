@@ -49,6 +49,7 @@ public class FromElementFactory implements SqlTokenTypes {
 	private boolean collection;
 	private QueryableCollection queryableCollection;
 	private CollectionType collectionType;
+	private String periodClause;
 
 	/**
 	 * Creates entity from elements.
@@ -63,6 +64,22 @@ public class FromElementFactory implements SqlTokenTypes {
 	/**
 	 * Creates collection from elements.
 	 */
+	public FromElementFactory(
+			FromClause fromClause,
+			FromElement origin,
+			String path,
+			String classAlias,
+			String[] columns,
+			String periodClause,
+			boolean implied) {
+		this( fromClause, origin, path );
+		this.classAlias = classAlias;
+		this.columns = columns;
+		this.implied = implied;
+		collection = true;
+		this.periodClause = periodClause;
+	}
+
 	public FromElementFactory(
 			FromClause fromClause,
 			FromElement origin,
@@ -488,7 +505,7 @@ public class FromElementFactory implements SqlTokenTypes {
 			throw new IllegalArgumentException( "EntityPersister " + entityPersister + " does not implement Joinable!" );
 		}
 		FromElement element = createFromElement( entityPersister );
-		initializeAndAddFromElement( element, className, classAlias, entityPersister, type, tableAlias );
+		initializeAndAddFromElement( element, className, classAlias, entityPersister, type, tableAlias, periodClause );
 		return element;
 	}
 
@@ -503,7 +520,22 @@ public class FromElementFactory implements SqlTokenTypes {
 			AliasGenerator aliasGenerator = fromClause.getAliasGenerator();
 			tableAlias = aliasGenerator.createName( entityPersister.getEntityName() );
 		}
-		element.initializeEntity( fromClause, className, entityPersister, type, classAlias, tableAlias );
+		element.initializeEntity( fromClause, className, entityPersister, type, classAlias, tableAlias);
+	}
+
+	private void initializeAndAddFromElement(
+			FromElement element,
+			String className,
+			String classAlias,
+			EntityPersister entityPersister,
+			EntityType type,
+			String tableAlias,
+			String periodClause) {
+		if ( tableAlias == null ) {
+			AliasGenerator aliasGenerator = fromClause.getAliasGenerator();
+			tableAlias = aliasGenerator.createName( entityPersister.getEntityName() );
+		}
+		element.initializeEntity( fromClause, className, entityPersister, type, classAlias, tableAlias, periodClause);
 	}
 
 	private FromElement createFromElement(EntityPersister entityPersister) {

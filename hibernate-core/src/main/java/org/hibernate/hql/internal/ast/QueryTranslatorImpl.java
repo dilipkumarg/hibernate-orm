@@ -280,7 +280,7 @@ public class QueryTranslatorImpl implements FilterTranslator {
 		return w;
 	}
 
-	private HqlParser parse(boolean filter) throws TokenStreamException {
+	private HqlParser parse(boolean filter) throws TokenStreamException, RecognitionException {
 		// Parse the query string into an HQL AST.
 		final HqlParser parser = HqlParser.getInstance( hql );
 		parser.setFilter( filter );
